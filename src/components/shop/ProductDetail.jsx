@@ -1,80 +1,143 @@
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
+import { useMemo } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-import Button from "../ui/Button";
-import useCart from "../../hooks/useCart";
+import useAuth from "../../hooks/useAuth";
+import { useCartStore } from "../../store/cartStore";
 
-export default function ProductDetail({ product }) {
-  const navigate = useNavigate();
+import {
+    formatPrice,
+    getPriceInfo,
+} from "../../config/priceEngine";
 
-  const { addToCart } = useCart();
+import { useProductStore } from "../../store/productStore";
 
-  if (!product) {
-    return (
-      <div className="rounded-2xl bg-slate-800 p-8 text-center">
-        <p className="text-slate-400">
-          Không tìm thấy sản phẩm.
-        </p>
-      </div>
+export default function ProductDetail() {
+    const { id } = useParams();
+
+    const navigate = useNavigate();
+
+    const { user } = useAuth();
+
+    const addToCart = useCartStore(
+        (state) => state.addToCart
     );
-  }
 
-  const price = Number(product.price) || 0;
+    const product = useProductStore((state) =>
+        state.products.find(
+            (item) => String(item.id) === String(id)
+        )
+    );
 
-  function handleAddToCart() {
-    addToCart(product);
-    toast.success("Đã thêm vào giỏ hàng");
-  }
+    const price = useMemo(() => {
+        if (!product) return null;
 
-  function handleBuyNow() {
-    addToCart(product);
+        return getPriceInfo(product, user);
+    }, [product, user]);
 
-    toast.success("Đang chuyển đến giỏ hàng...");
+    if (!product) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                Không tìm thấy sản phẩm
+            </div>
+        );
+    }
 
-    navigate("/cart");
-  }
+    const handleAddCart = () => {
+        addToCart({
+            ...product,
+            price: price.currentPrice,
+        });
+    };
 
-  return (
-    <div className="space-y-6">
-      <img
-        src={product.image}
-        alt={product.name}
-        onError={(e) => {
-          e.target.src = "https://placehold.co/800x800?text=No+Image";
-        }}
-        className="h-72 w-full rounded-2xl border border-slate-700 object-cover"
-      />
+    const handleBuyNow = () => {
+        handleAddCart();
+        navigate("/checkout");
+    };
 
-      <div>
-        <h1 className="text-3xl font-bold text-white">
-          {product.name}
-        </h1>
+    return (
+        <div className="mx-auto max-w-7xl p-6">
 
-        <p className="mt-3 leading-7 text-slate-400">
-          {product.description || "Chưa có mô tả cho sản phẩm này."}
-        </p>
+            <div className="grid gap-10 lg:grid-cols-2">
 
-        <p className="mt-6 text-3xl font-bold text-blue-400">
-          {price.toLocaleString("vi-VN")}₫
-        </p>
-      </div>
+                <div>
 
-      <div className="flex gap-3">
-        <Button
-          className="flex-1"
-          onClick={handleBuyNow}
-        >
-          Mua ngay
-        </Button>
+                    <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full rounded-2xl border"
+                    />
 
-        <Button
-          className="flex-1"
-          variant="secondary"
-          onClick={handleAddToCart}
-        >
-          Thêm vào giỏ
-        </Button>
-      </div>
-    </div>
-  );
+                </div>
+
+                <div>
+
+                    <h1 className="text-3xl font-bold">
+                        {product.name}
+                    </h1>
+
+                    <p className="mt-4 text-gray-600">
+                        {product.description}
+                    </p>
+
+                    <div className="mt-8">
+
+                        <div className="text-4xl font-bold text-red-600">
+                            {formatPrice(price.currentPrice)}
+                        </div>
+
+                        {price.currentPrice !==
+                            price.normalPrice && (
+                            <div className="mt-2 text-lg text-gray-400 line-through">
+                                {formatPrice(
+                                    price.normalPrice
+                                )}
+                            </div>
+                        )}
+
+                        {price.showSellerPrice && (
+                            <div className="mt-3 rounded-lg bg-orange-50 p-3 text-orange-600">
+                                Giá Seller:
+                                <strong className="ml-2">
+                                    {formatPrice(
+                                        price.sellerPrice
+                                    )}
+                                </strong>
+                            </div>
+                        )}
+
+                        {price.saving > 0 && (
+                            <div className="mt-3 rounded-lg bg-green-50 p-3 text-green-600">
+                                Tiết kiệm{" "}
+                                {formatPrice(
+                                    price.saving
+                                )}
+                            </div>
+                        )}
+
+                    </div>
+
+                    <div className="mt-10 flex gap-4">
+
+                        <button
+                            onClick={handleAddCart}
+                            className="flex-1 rounded-xl bg-blue-600 py-4 font-semibold text-white transition hover:bg-blue-700"
+                        >
+                            Thêm vào giỏ
+                        </button>
+
+                        <button
+                            onClick={handleBuyNow}
+                            className="flex-1 rounded-xl bg-red-600 py-4 font-semibold text-white transition hover:bg-red-700"
+                        >
+                            Mua ngay
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    );
 }

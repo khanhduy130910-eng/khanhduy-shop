@@ -1,44 +1,76 @@
-import { useNavigate } from "react-router-dom";
-
-import Card from "../ui/Card";
-import Button from "../ui/Button";
+import { Link } from "react-router-dom";
+import useAuth from "../../hooks/useAuth";
+import { getPriceInfo, formatPrice } from "../../config/priceEngine";
 
 export default function ProductCard({ product }) {
-  const navigate = useNavigate();
+    const { user } = useAuth();
 
-  const openDetail = () => {
-    navigate(`/product/${product.id}`);
-  };
+    const {
+        currentPrice,
+        normalPrice,
+        sellerPrice,
+        saving,
+        showSellerPrice,
+    } = getPriceInfo(product, user);
 
-  return (
-    <Card className="overflow-hidden p-0">
-      <img
-        src={product.image}
-        alt={product.name}
-        className="h-44 w-full cursor-pointer object-cover"
-        onClick={openDetail}
-      />
+    return (
+        <div className="overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:shadow-lg">
 
-      <div className="p-4">
-        <h3
-          className="cursor-pointer text-lg font-semibold text-white hover:text-blue-400"
-          onClick={openDetail}
-        >
-          {product.name}
-        </h3>
+            <Link to={`/product/${product.id}`}>
 
-        <p className="mt-1 line-clamp-2 text-sm text-slate-400">
-          {product.description}
-        </p>
+                <img
+                    src={product.image}
+                    alt={product.name}
+                    className="h-60 w-full object-cover"
+                />
 
-        <p className="mt-3 text-xl font-bold text-blue-400">
-          {product.price.toLocaleString("vi-VN")}₫
-        </p>
+            </Link>
 
-        <Button className="mt-4 w-full" onClick={openDetail}>
-          Xem chi tiết
-        </Button>
-      </div>
-    </Card>
-  );
+            <div className="p-4">
+
+                <h2 className="line-clamp-2 text-lg font-bold">
+                    {product.name}
+                </h2>
+
+                <p className="mt-2 line-clamp-2 text-sm text-gray-500">
+                    {product.description}
+                </p>
+
+                <div className="mt-4">
+
+                    <div className="text-2xl font-bold text-red-600">
+                        {formatPrice(currentPrice)}
+                    </div>
+
+                    {showSellerPrice && (
+                        <div className="mt-1 text-sm text-orange-600">
+                            Giá Seller: {formatPrice(sellerPrice)}
+                        </div>
+                    )}
+
+                    {saving > 0 && (
+                        <div className="mt-1 text-sm text-green-600">
+                            Tiết kiệm {formatPrice(saving)}
+                        </div>
+                    )}
+
+                    {currentPrice !== normalPrice && (
+                        <div className="text-sm text-gray-400 line-through">
+                            {formatPrice(normalPrice)}
+                        </div>
+                    )}
+
+                </div>
+
+                <Link
+                    to={`/product/${product.id}`}
+                    className="mt-5 block rounded-xl bg-blue-600 py-3 text-center font-semibold text-white transition hover:bg-blue-700"
+                >
+                    Xem chi tiết
+                </Link>
+
+            </div>
+
+        </div>
+    );
 }

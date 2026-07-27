@@ -1,93 +1,171 @@
 import { create } from "zustand";
 
-const STORAGE_KEY = "cart";
+const STORAGE_KEY = "khanhduy_shop_cart";
 
 const loadCart = () => {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const data = localStorage.getItem(STORAGE_KEY);
+
+    return data ? JSON.parse(data) : [];
   } catch {
     return [];
   }
 };
 
 const saveCart = (items) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(items)
+  );
 };
-
-const calculate = (items) => ({
-  totalItems: items.reduce((sum, item) => sum + item.quantity, 0),
-  totalPrice: items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  ),
-});
 
 export const useCartStore = create((set, get) => ({
   items: loadCart(),
-  ...calculate(loadCart()),
-
-  sync(items) {
-    saveCart(items);
-
-    set({
-      items,
-      ...calculate(items),
-    });
-  },
 
   addToCart(product) {
     const items = [...get().items];
 
-    const found = items.find((i) => i.id === product.id);
+    const index = items.findIndex(
+      (i) => i.id === product.id
+    );
 
-    if (found) {
-      found.quantity++;
+    if (index !== -1) {
+      items[index].quantity += 1;
     } else {
       items.push({
-        ...product,
+        id: product.id,
+        name: product.name,
+        image: product.image,
         quantity: 1,
+
+        role: product.role ?? "customer",
+
+        normalPrice:
+          product.normalPrice ??
+          product.price,
+
+        sellerPrice:
+          product.sellerPrice ??
+          product.price,
+
+        price: product.price,
       });
     }
 
-    get().sync(items);
+    saveCart(items);
+
+    set({ items });
   },
 
   increase(id) {
-    const items = [...get().items];
+    const items = get().items.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            quantity: item.quantity + 1,
+          }
+        : item
+    );
 
-    const item = items.find((i) => i.id === id);
+    saveCart(items);
 
-    if (item) item.quantity++;
-
-    get().sync(items);
+    set({ items });
   },
 
   decrease(id) {
-    const items = [...get().items];
+    const items = get()
+      .items.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              quantity: Math.max(
+                1,
+                item.quantity - 1
+              ),
+            }
+          : item
+      );
 
-    const item = items.find((i) => i.id === id);
+    saveCart(items);
 
-    if (!item) return;
+    set({ items });
+  },
 
-    if (item.quantity === 1) {
-      get().removeFromCart(id);
-      return;
-    }
+  setQuantity(id, quantity) {
+    const items = get().items.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            quantity: Math.max(
+              1,
+              quantity
+            ),
+          }
+        : item
+    );
 
-    item.quantity--;
+    saveCart(items);
 
-    get().sync(items);
+    set({ items });
+  },
+
+  remove(id) {
+    const items = get().items.filter(
+      (item) => item.id !== id
+    );
+
+    saveCart(items);
+
+    set({ items });
   },
 
   removeFromCart(id) {
-    const items = get().items.filter(
-      (i) => i.id !== id
-    );
+    get().remove(id);
+  },
 
-    get().sync(items);
+  clear() {
+    saveCart([]);
+
+    set({
+      items: [],
+    });
   },
 
   clearCart() {
-    get().sync([]);
+    get().clear();
+  },
+
+  refreshPrices(role) {
+    const items = get().items.map(
+      (item) => ({
+        ...item,
+        role,
+        price:
+          role === "seller"
+            ? item.sellerPrice
+            : item.normalPrice,
+      })
+    );
+
+    saveCart(items);
+
+    set({ items });
+  },
+
+  getSubtotal() {
+    return get().items.reduce(
+      (sum, item) =>
+        sum +
+        item.price * item.quantity,
+      0
+    );
+  },
+
+  getQuantity() {
+    return get().items.reduce(
+      (sum, item) =>
+        sum + item.quantity,
+      0
+    );
   },
 }));
