@@ -21,6 +21,26 @@ export default function AuthProvider({ children }) {
         try {
             setLoading(true);
 
+            // ===== DEV MODE =====
+            if (
+                window.location.hostname === "localhost" ||
+                window.location.hostname === "127.0.0.1"
+            ) {
+                login({
+                    telegramId: "dev-admin",
+                    username: "developer",
+                    firstName: "Developer",
+                    lastName: "",
+                    photoURL: "",
+                    role: "admin",
+                    sellerLevel: 999,
+                    isActive: true,
+                });
+
+                return;
+            }
+
+            // ===== TELEGRAM MODE =====
             const tg = window.Telegram?.WebApp;
 
             if (!tg || !tg.initDataUnsafe?.user) {
@@ -71,7 +91,6 @@ export default function AuthProvider({ children }) {
             tg.expand();
         } catch (error) {
             console.error("AuthProvider:", error);
-
             logout();
         } finally {
             setLoading(false);
