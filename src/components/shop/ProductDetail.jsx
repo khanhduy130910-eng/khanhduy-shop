@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import useAuth from "../../hooks/useAuth";
 import { useCartStore } from "../../store/cartStore";
@@ -9,23 +9,13 @@ import {
     getPriceInfo,
 } from "../../config/priceEngine";
 
-import { useProductStore } from "../../store/productStore";
-
-export default function ProductDetail() {
-    const { id } = useParams();
-
+export default function ProductDetail({ product }) {
     const navigate = useNavigate();
 
     const { user } = useAuth();
 
     const addToCart = useCartStore(
         (state) => state.addToCart
-    );
-
-    const product = useProductStore((state) =>
-        state.products.find(
-            (item) => String(item.id) === String(id)
-        )
     );
 
     const price = useMemo(() => {
@@ -56,21 +46,16 @@ export default function ProductDetail() {
 
     return (
         <div className="mx-auto max-w-7xl p-6">
-
             <div className="grid gap-10 lg:grid-cols-2">
-
                 <div>
-
                     <img
                         src={product.image}
                         alt={product.name}
                         className="w-full rounded-2xl border"
                     />
-
                 </div>
 
                 <div>
-
                     <h1 className="text-3xl font-bold">
                         {product.name}
                     </h1>
@@ -80,17 +65,13 @@ export default function ProductDetail() {
                     </p>
 
                     <div className="mt-8">
-
                         <div className="text-4xl font-bold text-red-600">
                             {formatPrice(price.currentPrice)}
                         </div>
 
-                        {price.currentPrice !==
-                            price.normalPrice && (
+                        {price.currentPrice !== price.normalPrice && (
                             <div className="mt-2 text-lg text-gray-400 line-through">
-                                {formatPrice(
-                                    price.normalPrice
-                                )}
+                                {formatPrice(price.normalPrice)}
                             </div>
                         )}
 
@@ -98,9 +79,7 @@ export default function ProductDetail() {
                             <div className="mt-3 rounded-lg bg-orange-50 p-3 text-orange-600">
                                 Giá Seller:
                                 <strong className="ml-2">
-                                    {formatPrice(
-                                        price.sellerPrice
-                                    )}
+                                    {formatPrice(price.sellerPrice)}
                                 </strong>
                             </div>
                         )}
@@ -108,16 +87,12 @@ export default function ProductDetail() {
                         {price.saving > 0 && (
                             <div className="mt-3 rounded-lg bg-green-50 p-3 text-green-600">
                                 Tiết kiệm{" "}
-                                {formatPrice(
-                                    price.saving
-                                )}
+                                {formatPrice(price.saving)}
                             </div>
                         )}
-
                     </div>
 
                     <div className="mt-10 flex gap-4">
-
                         <button
                             onClick={handleAddCart}
                             className="flex-1 rounded-xl bg-blue-600 py-4 font-semibold text-white transition hover:bg-blue-700"
@@ -131,13 +106,9 @@ export default function ProductDetail() {
                         >
                             Mua ngay
                         </button>
-
                     </div>
-
                 </div>
-
             </div>
-
         </div>
     );
 }
