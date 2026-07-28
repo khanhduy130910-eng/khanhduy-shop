@@ -19,6 +19,11 @@ const saveCart = (items) => {
   );
 };
 
+const persist = (items, set) => {
+  saveCart(items);
+  set({ items });
+};
+
 export const useCartStore = create((set, get) => ({
   items: loadCart(),
 
@@ -26,10 +31,10 @@ export const useCartStore = create((set, get) => ({
     const items = [...get().items];
 
     const index = items.findIndex(
-      (i) => i.id === product.id
+      (item) => item.id === product.id
     );
 
-    if (index !== -1) {
+    if (index >= 0) {
       items[index].quantity += 1;
     } else {
       items.push({
@@ -37,6 +42,7 @@ export const useCartStore = create((set, get) => ({
         name: product.name,
         image: product.image,
         quantity: 1,
+        selected: true,
 
         role: product.role ?? "customer",
 
@@ -52,29 +58,26 @@ export const useCartStore = create((set, get) => ({
       });
     }
 
-    saveCart(items);
-
-    set({ items });
+    persist(items, set);
   },
 
   increase(id) {
-    const items = get().items.map((item) =>
-      item.id === id
-        ? {
-            ...item,
-            quantity: item.quantity + 1,
-          }
-        : item
+    persist(
+      get().items.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              quantity: item.quantity + 1,
+            }
+          : item
+      ),
+      set
     );
-
-    saveCart(items);
-
-    set({ items });
   },
 
   decrease(id) {
-    const items = get()
-      .items.map((item) =>
+    persist(
+      get().items.map((item) =>
         item.id === id
           ? {
               ...item,
@@ -84,39 +87,35 @@ export const useCartStore = create((set, get) => ({
               ),
             }
           : item
-      );
-
-    saveCart(items);
-
-    set({ items });
+      ),
+      set
+    );
   },
 
   setQuantity(id, quantity) {
-    const items = get().items.map((item) =>
-      item.id === id
-        ? {
-            ...item,
-            quantity: Math.max(
-              1,
-              quantity
-            ),
-          }
-        : item
+    persist(
+      get().items.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              quantity: Math.max(
+                1,
+                Number(quantity) || 1
+              ),
+            }
+          : item
+      ),
+      set
     );
-
-    saveCart(items);
-
-    set({ items });
   },
 
   remove(id) {
-    const items = get().items.filter(
-      (item) => item.id !== id
+    persist(
+      get().items.filter(
+        (item) => item.id !== id
+      ),
+      set
     );
-
-    saveCart(items);
-
-    set({ items });
   },
 
   removeFromCart(id) {
@@ -124,15 +123,47 @@ export const useCartStore = create((set, get) => ({
   },
 
   clear() {
-    saveCart([]);
-
-    set({
-      items: [],
-    });
+    persist([], set);
   },
 
   clearCart() {
     get().clear();
+  },
+
+  toggleSelect(id) {
+    persist(
+      get().items.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              selected: !item.selected,
+            }
+          : item
+      ),
+      set
+    );
+  },
+
+  toggleSelectAll() {
+    const items = get().items;
+
+    const allSelected =
+      items.length > 0 &&
+      items.every((i) => i.selected);
+
+    persist(
+      items.map((item) => ({
+        ...item,
+        selected: !allSelected,
+      })),
+      set
+    );
+  },
+
+  isInCart(id) {
+    return get().items.some(
+      (item) => item.id === id
+    );
   },
 
   refreshPrices(role) {
@@ -147,9 +178,37 @@ export const useCartStore = create((set, get) => ({
       })
     );
 
-    saveCart(items);
+    persist(items, set);
+  },
 
-    set({ items });
+  getItems() {
+    return get().items;
+  },
+
+  getSelectedItems() {
+    return get().items.filter(
+      (item) => item.selected
+    );
+  },
+
+  getQuantity() {
+    return get().items.reduce(
+      (sum, item) =>
+        sum + item.quantity,
+      0
+    );
+  },
+
+  getSelectedQuantity() {
+    return get()
+      .items.filter(
+        (item) => item.selected
+      )
+      .reduce(
+        (sum, item) =>
+          sum + item.quantity,
+        0
+      );
   },
 
   getSubtotal() {
@@ -161,11 +220,20 @@ export const useCartStore = create((set, get) => ({
     );
   },
 
-  getQuantity() {
-    return get().items.reduce(
-      (sum, item) =>
-        sum + item.quantity,
-      0
-    );
+  getSelectedSubtotal() {
+    return get()
+      .items.filter(
+        (item) => item.selected
+      )
+      .reduce(
+        (sum, item) =>
+          sum +
+          item.price * item.quantity,
+        0
+      );
+  },
+
+  sync() {
+    persist(loadCart(), set);
   },
 }));

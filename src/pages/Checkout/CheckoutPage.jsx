@@ -12,6 +12,11 @@ import {
   increaseCouponUsed,
 } from "../../services/couponService";
 
+import {
+  getWalletBalance,
+  deductBalance,
+} from "../../services/walletService";
+
 import { calculateCoupon } from "../../utils/coupon";
 
 export default function CheckoutPage() {
@@ -21,14 +26,19 @@ export default function CheckoutPage() {
 
   const {
     items,
-    totalPrice,
-    totalQuantity,
+    selectedItems,
+    selectedTotalPrice,
+    selectedQuantity,
+    removeSelectedItems,
   } = useCart();
 
-  const [loading, setLoading] = useState(false);
-
-  const [checkingCoupon, setCheckingCoupon] =
+  const [loading, setLoading] =
     useState(false);
+
+  const [
+    checkingCoupon,
+    setCheckingCoupon,
+  ] = useState(false);
 
   const [couponCode, setCouponCode] =
     useState("");
@@ -40,7 +50,7 @@ export default function CheckoutPage() {
     useState(0);
 
   const [finalPrice, setFinalPrice] =
-    useState(totalPrice);
+    useState(selectedTotalPrice);
 
   const [form, setForm] = useState({
     name: user?.name || "",
@@ -51,41 +61,55 @@ export default function CheckoutPage() {
   });
 
   useEffect(() => {
+    if (items.length === 0) {
+      navigate("/cart");
+      return;
+    }
+
+    if (selectedItems.length === 0) {
+      toast.error(
+        "Vui lòng chọn sản phẩm."
+      );
+
+      navigate("/cart");
+    }
+  }, [items, selectedItems, navigate]);
+
+  useEffect(() => {
     if (!coupon) {
       setDiscount(0);
-      setFinalPrice(totalPrice);
+      setFinalPrice(selectedTotalPrice);
       return;
     }
 
     const calc = calculateCoupon(
-      totalPrice,
+      selectedTotalPrice,
       coupon
     );
 
     if (calc.discount <= 0) {
-      toast("Mã giảm giá không còn hợp lệ.");
+      toast(
+        "Mã giảm giá không còn hợp lệ."
+      );
 
       setCoupon(null);
-
       setDiscount(0);
-
-      setFinalPrice(totalPrice);
+      setFinalPrice(selectedTotalPrice);
 
       return;
     }
 
     setDiscount(calc.discount);
-
     setFinalPrice(calc.total);
-  }, [coupon, totalPrice]);
+  }, [coupon, selectedTotalPrice]);
 
   const canCheckout = useMemo(() => {
     return (
-      items.length > 0 &&
+      selectedItems.length > 0 &&
       form.name.trim() &&
       form.phone.trim()
     );
-  }, [items, form]);
+  }, [selectedItems, form]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -107,7 +131,7 @@ export default function CheckoutPage() {
 
       setCoupon(null);
       setDiscount(0);
-      setFinalPrice(totalPrice);
+      setFinalPrice(selectedTotalPrice);
 
       const result =
         await getCouponByCode(
@@ -140,11 +164,10 @@ export default function CheckoutPage() {
 
       const calc =
         calculateCoupon(
-          totalPrice,
+          selectedTotalPrice,
           result
         );
-
-      if (calc.discount <= 0) {
+              if (calc.discount <= 0) {
         toast.error(
           `Đơn tối thiểu ${result.minOrder.toLocaleString(
             "vi-VN"
@@ -155,9 +178,7 @@ export default function CheckoutPage() {
       }
 
       setCoupon(result);
-
       setDiscount(calc.discount);
-
       setFinalPrice(calc.total);
 
       toast.success(
@@ -218,6 +239,30 @@ export default function CheckoutPage() {
         }
       }
 
+      if (
+        form.paymentMethod ===
+        "wallet"
+      ) {
+        const balance =
+          await getWalletBalance(
+            user.uid
+          );
+
+        if (balance < finalPrice) {
+          toast.error(
+            "Số dư không đủ."
+          );
+
+          return;
+        }
+
+        await deductBalance(
+          user.uid,
+          finalPrice,
+          "Thanh toán đơn hàng"
+        );
+      }
+
       const order =
         await createOrder({
           customer: {
@@ -228,9 +273,10 @@ export default function CheckoutPage() {
             note: form.note,
           },
 
-          items,
+          items: selectedItems,
 
-          totalPrice,
+          totalPrice:
+            selectedTotalPrice,
 
           discount,
 
@@ -246,18 +292,33 @@ export default function CheckoutPage() {
 
           paymentMethod:
             form.paymentMethod,
+
+          status:
+            form.paymentMethod ===
+            "wallet"
+              ? "paid"
+              : "pending_payment",
         });
-              if (latestCoupon) {
-        await increaseCouponUsed(latestCoupon);
+
+      if (latestCoupon) {
+        await increaseCouponUsed(
+          latestCoupon
+        );
       }
 
-      toast.success("Đặt hàng thành công.");
+      await removeSelectedItems();
+
+      toast.success(
+        "Đặt hàng thành công."
+      );
 
       navigate(`/order/${order.id}`);
     } catch (error) {
       console.error(error);
 
-      toast.error("Không thể tạo đơn hàng.");
+      toast.error(
+        "Không thể tạo đơn hàng."
+      );
     } finally {
       setLoading(false);
     }
@@ -276,17 +337,19 @@ export default function CheckoutPage() {
           </span>
 
           <span className="font-semibold text-white">
-            {totalQuantity}
+            {selectedQuantity}
           </span>
         </div>
-
-        <div className="mt-3 flex justify-between">
+                <div className="mt-3 flex justify-between">
           <span className="text-slate-400">
             Tạm tính
           </span>
 
           <span className="font-semibold text-white">
-            {totalPrice.toLocaleString("vi-VN")}₫
+            {selectedTotalPrice.toLocaleString(
+              "vi-VN"
+            )}
+            ₫
           </span>
         </div>
 
@@ -331,14 +394,14 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        <div className="mt-5 border-t border-slate-700 pt-4 space-y-3">
+        <div className="mt-5 space-y-3 border-t border-slate-700 pt-4">
           <div className="flex justify-between">
             <span className="text-slate-400">
               Tạm tính
             </span>
 
             <span>
-              {totalPrice.toLocaleString(
+              {selectedTotalPrice.toLocaleString(
                 "vi-VN"
               )}
               ₫
@@ -410,8 +473,7 @@ export default function CheckoutPage() {
           className="w-full rounded-xl bg-slate-700 p-3 outline-none"
         />
       </div>
-
-      <div className="mt-6 rounded-2xl bg-slate-800 p-5">
+            <div className="mt-6 rounded-2xl bg-slate-800 p-5">
         <h2 className="mb-4 font-semibold text-white">
           Phương thức thanh toán
         </h2>
@@ -444,6 +506,17 @@ export default function CheckoutPage() {
 
           <span>Số dư ví</span>
         </label>
+
+        {form.paymentMethod ===
+          "wallet" && (
+          <div className="mt-4 rounded-xl border border-blue-500/40 bg-blue-500/10 p-4">
+            <p className="text-sm text-blue-300">
+              Thanh toán bằng số dư ví sẽ
+              trừ tiền ngay sau khi đặt
+              hàng thành công.
+            </p>
+          </div>
+        )}
       </div>
 
       <button

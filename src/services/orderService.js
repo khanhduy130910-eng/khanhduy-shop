@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  orderBy,
   query,
   serverTimestamp,
   updateDoc,
@@ -23,6 +24,7 @@ export async function createOrder({
   coupon = null,
   paymentMethod,
   paymentProof = "",
+  status = "pending_payment",
 }) {
   const order = {
     customer,
@@ -41,7 +43,7 @@ export async function createOrder({
 
     paymentProof,
 
-    status: "pending_payment",
+    status,
 
     createdAt: serverTimestamp(),
 
@@ -60,7 +62,9 @@ export async function createOrder({
 }
 
 export async function getOrder(id) {
-  const snap = await getDoc(doc(db, ORDERS, id));
+  const snap = await getDoc(
+    doc(db, ORDERS, id)
+  );
 
   if (!snap.exists()) {
     return null;
@@ -75,7 +79,8 @@ export async function getOrder(id) {
 export async function getOrdersByUser(uid) {
   const q = query(
     collection(db, ORDERS),
-    where("customer.uid", "==", uid)
+    where("customer.uid", "==", uid),
+    orderBy("createdAt", "desc")
   );
 
   const snapshot = await getDocs(q);
@@ -87,9 +92,12 @@ export async function getOrdersByUser(uid) {
 }
 
 export async function getAllOrders() {
-  const snapshot = await getDocs(
-    collection(db, ORDERS)
+  const q = query(
+    collection(db, ORDERS),
+    orderBy("createdAt", "desc")
   );
+
+  const snapshot = await getDocs(q);
 
   return snapshot.docs.map((docItem) => ({
     id: docItem.id,
@@ -107,15 +115,44 @@ export async function updateOrderStatus(
   });
 }
 
+export async function updateOrder(
+  id,
+  data
+) {
+  await updateDoc(doc(db, ORDERS, id), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function uploadPaymentProof(
   id,
   imageUrl
 ) {
   await updateDoc(doc(db, ORDERS, id), {
     paymentProof: imageUrl,
-
     status: "pending_review",
+    updatedAt: serverTimestamp(),
+  });
+}
 
+export async function markOrderPaid(id) {
+  await updateDoc(doc(db, ORDERS, id), {
+    status: "paid",
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function completeOrder(id) {
+  await updateDoc(doc(db, ORDERS, id), {
+    status: "completed",
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function cancelOrder(id) {
+  await updateDoc(doc(db, ORDERS, id), {
+    status: "cancelled",
     updatedAt: serverTimestamp(),
   });
 }
