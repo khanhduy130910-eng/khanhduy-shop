@@ -4,15 +4,19 @@ import QuickActions from "../../components/dashboard/QuickActions";
 import FeaturedProducts from "../../components/dashboard/FeaturedProducts";
 
 export default function HomePage() {
-  return (
-    <div className="space-y-6">
-      <GreetingCard />
+    return (
+        <main className="mx-auto max-w-7xl space-y-8 px-4 py-6">
 
-      <BalanceCard />
+            <GreetingCard />
 
-      <QuickActions />
+            <BalanceCard />
 
-      <FeaturedProducts />
-    </div>
-  );
+            <QuickActions />
+
+            <FeaturedProducts />
+
+            <div className="h-24" />
+
+        </main>
+    );
 }

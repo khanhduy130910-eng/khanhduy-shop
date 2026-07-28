@@ -1,126 +1,159 @@
-import { Minus, Plus, Trash2 } from "lucide-react";
+import {
+    Minus,
+    Plus,
+    Trash2,
+    Check,
+} from "lucide-react";
 
 import useCart from "../../hooks/useCart";
 import useAuth from "../../hooks/useAuth";
 
 import {
-  formatPrice,
-  getPriceInfo,
+    formatPrice,
+    getPriceInfo,
 } from "../../config/priceEngine";
 
 export default function CartItem({ item }) {
-  const {
-    increase,
-    decrease,
-    removeFromCart,
-  } = useCart();
+    const {
+        increase,
+        decrease,
+        removeFromCart,
+    } = useCart();
 
-  const { user } = useAuth();
+    const { user } = useAuth();
 
-  const price = getPriceInfo(item, user);
+    const price = getPriceInfo(item, user);
 
-  const total =
-    price.currentPrice * item.quantity;
+    const total =
+        price.currentPrice * item.quantity;
 
-  return (
-    <div className="flex gap-4 rounded-2xl border border-slate-700 bg-slate-800 p-4 transition-all duration-200 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-900/20">
+    return (
+        <article className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 transition duration-300 hover:border-blue-500 hover:shadow-xl">
 
-      <img
-        src={item.image}
-        alt={item.name}
-        onError={(e) => {
-          e.target.src =
-            "https://placehold.co/200x200?text=No+Image";
-        }}
-        className="h-24 w-24 rounded-xl object-cover"
-      />
+            <div className="flex flex-col gap-5 p-5 sm:flex-row">
 
-      <div className="flex flex-1 flex-col justify-between">
+                {/* Ảnh */}
 
-        <div>
+                <div className="relative">
 
-          <h2 className="line-clamp-2 text-base font-semibold text-white">
-            {item.name}
-          </h2>
+                    <img
+                        src={item.image}
+                        alt={item.name}
+                        onError={(e) => {
+                            e.target.src =
+                                "https://placehold.co/300x300?text=No+Image";
+                        }}
+                        className="h-32 w-32 rounded-2xl object-cover"
+                    />
 
-          <div className="mt-3">
+                    <div className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white shadow">
 
-            <p className="text-sm text-slate-400">
-              Đơn giá
-            </p>
+                        <Check size={14} />
 
-            <p className="text-xl font-bold text-blue-400">
-              {formatPrice(price.currentPrice)}
-            </p>
+                    </div>
 
-            {price.currentPrice !==
-              price.normalPrice && (
-              <p className="text-sm text-slate-500 line-through">
-                {formatPrice(price.normalPrice)}
-              </p>
-            )}
+                </div>
 
-            {price.showSellerPrice && (
-              <div className="mt-2 inline-flex rounded-lg bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-400">
-                Giá Seller:{" "}
-                {formatPrice(price.sellerPrice)}
-              </div>
-            )}
+                {/* Nội dung */}
 
-          </div>
+                <div className="flex flex-1 flex-col">
 
-          <div className="mt-4">
+                    <div className="flex flex-col gap-2">
 
-            <p className="text-sm text-slate-400">
-              Thành tiền
-            </p>
+                        <h2 className="text-lg font-bold text-white">
+                            {item.name}
+                        </h2>
 
-            <p className="text-xl font-bold text-green-400">
-              {formatPrice(total)}
-            </p>
+                        <div className="flex flex-wrap items-center gap-3">
 
-          </div>
+                            <span className="text-2xl font-bold text-blue-400">
+                                {formatPrice(price.currentPrice)}
+                            </span>
 
-        </div>
+                            {price.currentPrice !==
+                                price.normalPrice && (
+                                <span className="text-sm text-zinc-500 line-through">
+                                    {formatPrice(price.normalPrice)}
+                                </span>
+                            )}
 
-        <div className="mt-5 flex items-center justify-between">
+                        </div>
 
-          <div className="flex items-center gap-2">
+                        {price.showSellerPrice && (
+                            <span className="inline-flex w-fit rounded-full bg-orange-500/15 px-3 py-1 text-xs font-semibold text-orange-400">
+                                Giá Seller:{" "}
+                                {formatPrice(
+                                    price.sellerPrice
+                                )}
+                            </span>
+                        )}
 
-            <button
-              onClick={() => decrease(item.id)}
-              className="rounded-lg bg-slate-700 p-2 transition hover:bg-slate-600 active:scale-95"
-            >
-              <Minus size={16} />
-            </button>
+                    </div>
 
-            <span className="min-w-[40px] text-center text-lg font-bold text-white">
-              {item.quantity}
-            </span>
+                    <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
 
-            <button
-              onClick={() => increase(item.id)}
-              className="rounded-lg bg-blue-600 p-2 transition hover:bg-blue-500 active:scale-95"
-            >
-              <Plus size={16} />
-            </button>
+                        {/* Quantity */}
 
-          </div>
+                        <div className="flex items-center rounded-2xl border border-zinc-700 bg-zinc-950">
 
-          <button
-            onClick={() =>
-              removeFromCart(item.id)
-            }
-            className="rounded-lg bg-red-600 p-2 transition hover:bg-red-500 active:scale-95"
-            title="Xóa sản phẩm"
-          >
-            <Trash2 size={18} />
-          </button>
+                            <button
+                                onClick={() =>
+                                    decrease(item.id)
+                                }
+                                className="rounded-l-2xl p-3 transition hover:bg-zinc-800"
+                            >
+                                <Minus size={18} />
+                            </button>
 
-        </div>
+                            <span className="min-w-[60px] text-center text-lg font-bold text-white">
+                                {item.quantity}
+                            </span>
 
-      </div>
+                            <button
+                                onClick={() =>
+                                    increase(item.id)
+                                }
+                                className="rounded-r-2xl p-3 transition hover:bg-zinc-800"
+                            >
+                                <Plus size={18} />
+                            </button>
 
-    </div>
-  );
+                        </div>
+
+                        {/* Tổng tiền */}
+
+                        <div className="text-right">
+
+                            <div className="text-sm text-zinc-500">
+                                Thành tiền
+                            </div>
+
+                            <div className="text-2xl font-extrabold text-green-400">
+                                {formatPrice(total)}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div className="mt-5 flex justify-end">
+
+                        <button
+                            onClick={() =>
+                                removeFromCart(item.id)
+                            }
+                            className="flex items-center gap-2 rounded-2xl border border-red-500 px-4 py-2 font-medium text-red-400 transition hover:bg-red-500 hover:text-white"
+                        >
+                            <Trash2 size={18} />
+                            Xóa
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </article>
+    );
 }
